@@ -4,47 +4,75 @@ from snake import Snake
 import random
 import itertools
 
+DIRECTION_TO_VECTOR = {
+            'left': Vector((-1, 0)),
+            'right': Vector((1, 0)),
+            'down': Vector((0, 1)),
+            'up': Vector((0, -1))
+        }
+
+BLOCK_SIZE = 10  # pixels
+GRID_SIZE = 40  # blocks
+
+BACKGROUND_COLOR = (0, 0, 0)  # black
+SNAKE_COLOR = (255, 255, 255)  # white
+FOOD_COLOR = (255, 0, 0)  # red
+
 
 class Game(object):
-    direction_to_vector = {
-                'left': Vector((-1, 0)),
-                'right': Vector((1, 0)),
-                'down': Vector((0, 1)),
-                'up': Vector((0, -1))
-            }
+    """A game of snake!
 
-    block_size = 10  # pixels
-    grid_size = 40  # blocks
-
-    background_color = (0, 0, 0)  # black
-    snake_color = (255, 255, 255)  # white
-    food_color = (255, 0, 0)  # red
-
+    Attributes
+    __________
+    snake : Snake
+        The snake.
+    screen : Surface
+        The game window/screen.
+    food : Vector
+        The position of the food.
+    """
     def __init__(self):
-        grid_center = Vector((0.5, 0.5)) * Game.grid_size
-        self.snake = Snake(grid_center, Game.direction_to_vector['down'])
-        self.screen = pygame.display.set_mode(Vector((1, 1)) * (Game.grid_size * Game.block_size))
+        grid_center = Vector((0.5, 0.5)) * GRID_SIZE
+        self.snake = Snake(grid_center, DIRECTION_TO_VECTOR['down'])
+        self.screen = pygame.display.set_mode(Vector((1, 1)) * (GRID_SIZE * BLOCK_SIZE))
         self.food = self.get_random_coords()
 
-    def out_of_bounds(self):
+    def _out_of_bounds(self):
+        """Check if snake has gone out of bounds.
+
+        Returns
+        _______
+        bool
+        """
         x, y = self.snake.head()
-        if x < 0 or x >= Game.grid_size or y < 0 or y >= Game.grid_size:
+        if x < 0 or x >= GRID_SIZE or y < 0 or y >= GRID_SIZE:
             return True
         return False
 
-    def grid_full(self):
-        return len(self.snake.body) >= Game.grid_size**2
+    def _grid_full(self):
+        """Check if the grid has any unoccupied points remaining.
+
+        If the grid is completely occupied by the snake's body,
+        then we have reached the end of a perfect game.
+
+        Returns
+        _______
+        bool
+        """
+        return len(self.snake.body) >= GRID_SIZE**2
 
     def move(self, direction):
-        """
+        """Move the snake 1 step in the given direction.
+
         Parameters
         ----------
         direction : {'left', 'right', 'up', 'down'}
-            The direction the snake should move in.
+            If the direction is not one of the valid choices, the snake will move 1 step in the
+            direction it was already pointing in.
         """
         if not self.out_of_bounds() and not self.snake.self_intersecting() and not self.grid_full():
-            if direction in Game.direction_to_vector:
-                direction = Game.direction_to_vector[direction]
+            if direction in DIRECTION_TO_VECTOR:
+                direction = DIRECTION_TO_VECTOR[direction]
             else:
                 direction = self.snake.direction
 
@@ -55,18 +83,41 @@ class Game(object):
                 self.food = self.get_random_coords()
 
     @staticmethod
-    def block(grid_coord):
-        return  pygame.rect.Rect(grid_coord * Game.block_size, Vector((1, 1)) * Game.block_size)
+    def _create_block(grid_coord):
+        """Create a visual block for the provided grid coordinates.
+
+        Internally, the game grid is represented by a 2D integer lattice where each point in 
+        the lattice is a possible position. In order to visualize the game, we need to create 
+        a visual block, which we can draw to the screen, for each occupied lattice point.
+
+        Parameters
+        __________
+        grid_coord : Vector
+            A position in the game grid.
+
+        Returns
+        _______
+        block : Rect
+        """
+        return  pygame.rect.Rect(grid_coord * BLOCK_SIZE, Vector((1, 1)) * BLOCK_SIZE)
 
     def draw(self):
-        self.screen.fill(Game.background_color)
-        pygame.draw.rect(self.screen, Game.food_color, self.block(self.food))
+        """Draw the current game state to screen.
+        """
+        self.screen.fill(BACKGROUND_COLOR)
+        pygame.draw.rect(self.screen, FOOD_COLOR, self.create_block(self.food))
         for p in self.snake:
-            pygame.draw.rect(self.screen, Game.snake_color, self.block(p))
+            pygame.draw.rect(self.screen, SNAKE_COLOR, self.create_block(p))
         pygame.display.update()
 
-    def get_random_coords(self):
-        possible_vals = set(xrange(Game.grid_size))
+    def _get_random_coords(self):
+        """Randomly select an unoccupied point in the game grid.
+
+        Returns
+        _______
+        coords : Vector
+        """
+        possible_vals = set(xrange(GRID_SIZE))
         possible_x = possible_vals - set([coord[0] for coord in self.snake.body])
         possible_y = possible_vals - set([coord[1] for coord in self.snake.body])
         x = random.choice(list(possible_x))
